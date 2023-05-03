@@ -38,7 +38,8 @@ readsect(u32int *off, u16int *sz)
 		*sz = count;
 	} else if(Bread(ips, section + Hdrsz, *sz) != *sz)
 		sysfatal("short read of data: %r");
-	//fprint(2, "%ud %ud\n", *off, *sz);
+	if(dump)
+		fprint(2, "%ud %ud\n", *off, *sz);
 	return 1;
 }
 
