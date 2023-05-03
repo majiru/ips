@@ -12,6 +12,7 @@ enum{
 
 static uchar section[Hdrsz + 0xFFFF + RLEsz];
 static Biobuf *ips;
+static int dump = 0;
 
 static int
 readsect(u32int *off, u16int *sz)
@@ -37,6 +38,7 @@ readsect(u32int *off, u16int *sz)
 		*sz = count;
 	} else if(Bread(ips, section + Hdrsz, *sz) != *sz)
 		sysfatal("short read of data: %r");
+	//fprint(2, "%ud %ud\n", *off, *sz);
 	return 1;
 }
 
@@ -57,6 +59,9 @@ main(int argc, char **argv)
 	u16int sz;
 
 	ARGBEGIN{
+	case 'd':
+		dump++;
+		break;
 	default:
 		usage();
 	}ARGEND;

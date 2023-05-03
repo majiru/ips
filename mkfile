@@ -1,8 +1,8 @@
 </$objtype/mkfile
 
 BIN=$home/bin/$objtype
-TARG=ips
-OFILES=\
-	ips.$O\
+TARG=\
+	ipsdiff\
+	ipspatch\
 
-</sys/src/cmd/mkone
+</sys/src/cmd/mkmany
