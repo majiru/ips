@@ -1,0 +1,6 @@
+IPS files are binary patches popular in some game modding communities.
+This repo includes tools for applying and creating IPS files.
+
+Usage:
+	; ipsdiff base modified >patch.ips
+	; ipspatch patch.ips <base >modified
