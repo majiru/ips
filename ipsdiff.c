@@ -10,7 +10,7 @@ typedef struct Bin Bin;
 struct Bin{
 	int fd;
 	long dot;
-	long n, off;
+	long n;
 	uchar data[0xFFFF];
 };
 
@@ -20,29 +20,44 @@ static int dump = 0;
 static long
 slurp(Bin *b)
 {
-	long n;
-
-	n = readn(b->fd, b->data + b->off, sizeof b->data - b->off);
-	if(n < 0)
+	b->n = readn(b->fd, b->data, sizeof b->data);
+	if(b->n < 0)
 		sysfatal("read: %r");
-	b->n = b->off + n;
-	return n;
+	return b->n;
 }
 
 static void
 emit(u32int off, uchar *data, u16int size)
 {
 	uchar buf[3 + 2];
+	uchar buf2[2 + 1];
+	uchar v, *p, *e;
 
 	if(size == 0)
 		return;
+
 	PUT3(buf, off);
+	if(size > 3 && data[0] == data[1]){
+		p = data + 2;
+		e = data + size;
+		v = data[0];
+		while(p < e && *p == v)
+			p++;
+		PUT2(buf2, size);
+		if(p == e)
+			size = 0;
+		buf2[2] = v;
+	}
+
 	PUT2(buf+3, size);
 	if(dump)
 		fprint(2, "%ud %ud\n", off, size);
 	if(Bwrite(ips, buf, sizeof buf) != sizeof buf)
 		sysfatal("Bwrite: %r");
-	if(Bwrite(ips, data, size) != size)
+
+	if(size == 0 && Bwrite(ips, buf2, sizeof buf2) != sizeof buf2)
+		sysfatal("Bwrite: %r");
+	if(size != 0 && Bwrite(ips, data, size) != size)
 		sysfatal("Bwrite: %r");
 }
 
@@ -62,21 +77,22 @@ diff(Bin *a, Bin *b)
 	if(a->n != b->n)
 		sysfatal("desync: %ld %ld", a->n, a->n);
 
-	while(ap < ae && bp < be){
+	for(; ap < ae && bp < be; ap = ac, bp = bc){
 		if(*ap == *bp){
-			ap++;
-			bp++;
+			ac = ap+1;
+			bc = bp+1;
 			continue;
 		}
-		// FIXME: better way of expanding diff context
-		x = 32;
+		x = 2;
 		for(ac = ap, bc = bp; ac < ae && bc < be; ac++, bc++){
-			if(--x <= 0 && *ac == *bc)
+			if(*ac == *bc)
+				x--;
+			else
+				x = 2;
+			if(x == 0)
 				break;
 		}
 		emit(a->dot + (ap - a->data), bp, bc - bp);
-		ap = ac;
-		bp = bc;
 	}
 	a->dot += a->n;
 	b->dot += b->n;
