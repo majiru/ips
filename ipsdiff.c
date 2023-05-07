@@ -62,6 +62,34 @@ emit(u32int off, uchar *data, u16int size)
 }
 
 static void
+RLEpass(u32int base, uchar *p, uchar *e)
+{
+	uchar *u, *uu;
+	uchar *start;
+	uchar v;
+
+	if(e - p <= 8){
+		emit(base, p, e - p);
+		return;
+	}
+
+	start = p;
+	for(u = p; u < e; u = uu){
+		v = *u;
+		for(uu = u+1; uu < e && *uu == v; uu++)
+			;
+		if(uu - u < 8)
+			continue;
+		if(u > p)
+			emit(base + (p - start), p, u - p);
+		emit(base + (u - start), u, uu - u);
+		p = uu;
+	}
+	if(u > p)
+		emit(base + (p - start), p, u - p);
+}
+
+static void
 diff(Bin *a, Bin *b)
 {
 	uchar *ap, *bp;
@@ -83,16 +111,20 @@ diff(Bin *a, Bin *b)
 			bc = bp+1;
 			continue;
 		}
-		x = 2;
+		x = 4;
 		for(ac = ap, bc = bp; ac < ae && bc < be; ac++, bc++){
 			if(*ac == *bc)
 				x--;
 			else
-				x = 2;
+				x = 4;
 			if(x == 0)
 				break;
 		}
-		emit(a->dot + (ap - a->data), bp, bc - bp);
+		for(; ac > ap && bc > bp && *ac == *bc; ac--, bc--)
+			;
+		bc++;
+		ac++;
+		RLEpass(a->dot + (ap - a->data), bp, bc);
 	}
 	a->dot += a->n;
 	b->dot += b->n;
